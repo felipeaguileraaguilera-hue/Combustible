@@ -2,7 +2,7 @@
 
 Sistema de control de gasóleo para la gestión de depósitos de combustible.
 
-**Stack:** React 18 + Vite + Tailwind CSS + Supabase
+**Stack:** React 18 + Vite + Tailwind CSS + Supabase.
 
 ---
 
