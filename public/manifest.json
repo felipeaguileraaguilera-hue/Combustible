@@ -1,0 +1,22 @@
+{
+  "name": "Combustible - Aceites Tapia",
+  "short_name": "Combustible",
+  "description": "Control de gasóleo para Aceites Tapia SL",
+  "start_url": "/combustible/",
+  "display": "standalone",
+  "background_color": "#0f1114",
+  "theme_color": "#0f1114",
+  "orientation": "portrait",
+  "icons": [
+    {
+      "src": "/fuel-icon-192.png",
+      "sizes": "192x192",
+      "type": "image/png"
+    },
+    {
+      "src": "/fuel-icon-512.png",
+      "sizes": "512x512",
+      "type": "image/png"
+    }
+  ]
+}
