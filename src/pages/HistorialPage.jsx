@@ -18,7 +18,7 @@ export default function HistorialPage({ user, isAdmin }) {
         product: productFilter,
         refuelType: filter,
       }
-      if (!isAdmin) params.userId = user.id
+      if (!isAdmin) params.staffId = user.id
 
       const { data, count } = await getExits(params)
       setExits(data || [])
@@ -107,7 +107,7 @@ export default function HistorialPage({ user, isAdmin }) {
               <div className="flex justify-between items-start">
                 <div>
                   {isAdmin && (
-                    <div className="text-sm font-semibold mb-0.5">{ex.user_name}</div>
+                    <div className="text-sm font-semibold mb-0.5">{ex.staff_name}</div>
                   )}
                   <div className="text-[13px] text-gray-500">
                     {formatDateTime(ex.date)}

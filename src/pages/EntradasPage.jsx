@@ -4,7 +4,7 @@ import { IconPlus, IconTruck } from '../components/Icons'
 import { createEntry, getEntries } from '../lib/database'
 import { todayLocal, formatDate, formatVolume, formatCurrency, isFutureDate } from '../lib/utils'
 
-export default function EntradasPage({ showToast }) {
+export default function EntradasPage({ user, showToast }) {
   const [form, setForm] = useState({
     date: todayLocal(),
     product: 'Diesel',
@@ -42,7 +42,7 @@ export default function EntradasPage({ showToast }) {
     if (!validate()) return
     setLoading(true)
     try {
-      await createEntry(form)
+      await createEntry({ ...form, created_by: user.id })
       setForm({ date: todayLocal(), product: 'Diesel', volume: '', supplier: '', price_per_liter: '' })
       setErrors({})
       showToast('Entrada registrada correctamente')

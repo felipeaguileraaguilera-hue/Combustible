@@ -32,8 +32,8 @@ export default function SalidasPage({ user, showToast }) {
     setLoading(true)
     try {
       await createExit({
-        user_id: user.id,
-        user_name: user.name,
+        staff_id: user.id,
+        staff_name: user.name,
         date: form.date,
         product: form.product,
         volume: form.volume,

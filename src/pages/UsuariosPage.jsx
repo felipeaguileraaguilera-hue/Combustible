@@ -1,8 +1,8 @@
 import { useState, useEffect } from 'react'
 import { Card, Button, Input, Modal, Badge, EmptyState, ConfirmDialog, Spinner } from '../components/UI'
 import { IconPlus, IconTrash } from '../components/Icons'
-import { getProfiles, deleteProfile } from '../lib/database'
-import { createUser } from '../lib/auth'
+import { getStaffMembers, deactivateStaffMember } from '../lib/database'
+import { createStaffMember } from '../lib/auth'
 
 export default function UsuariosPage({ showToast }) {
   const [users, setUsers] = useState([])
@@ -15,7 +15,7 @@ export default function UsuariosPage({ showToast }) {
 
   const loadUsers = async () => {
     try {
-      const data = await getProfiles()
+      const data = await getStaffMembers()
       setUsers(data || [])
     } catch (err) {
       console.error(err)
@@ -42,7 +42,7 @@ export default function UsuariosPage({ showToast }) {
         .map((p) => p.trim().toUpperCase())
         .filter(Boolean)
 
-      await createUser({
+      await createStaffMember({
         name: newUser.name.trim(),
         phone: cleaned,
         plates,
@@ -62,7 +62,7 @@ export default function UsuariosPage({ showToast }) {
 
   const handleDelete = async (userId) => {
     try {
-      await deleteProfile(userId)
+      await deactivateStaffMember(userId)
       showToast('Usuario eliminado', 'info')
       loadUsers()
     } catch (err) {

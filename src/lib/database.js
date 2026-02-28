@@ -1,12 +1,14 @@
 import { supabase } from './supabase'
 
 // ═══════════════════════════════════════════════════════════════
-// SERVICIO DE DATOS - COMBUSTIBLE
+// SERVICIO DE DATOS — COMBUSTIBLE (Ecosistema Unificado)
 // ═══════════════════════════════════════════════════════════════
+// Tablas: staff, fuel_entries, fuel_exits
+// Instancia: ylbwewlvovyfxoerhrnf.supabase.co (compartida)
 
 // ─── ENTRADAS (Abastecimiento) ───
 
-export async function createEntry({ date, product, volume, supplier, price_per_liter }) {
+export async function createEntry({ date, product, volume, supplier, price_per_liter, created_by }) {
   const { data, error } = await supabase
     .from('fuel_entries')
     .insert({
@@ -15,6 +17,7 @@ export async function createEntry({ date, product, volume, supplier, price_per_l
       volume: parseFloat(volume),
       supplier: supplier.trim(),
       price_per_liter: parseFloat(price_per_liter),
+      created_by,  // staff.id del admin que registra
     })
     .select()
     .single()
@@ -45,12 +48,12 @@ export async function deleteEntry(id) {
 
 // ─── SALIDAS (Repostaje) ───
 
-export async function createExit({ staff_id, user_name, date, product, volume, refuel_type, plate }) {
+export async function createExit({ staff_id, staff_name, date, product, volume, refuel_type, plate }) {
   const { data, error } = await supabase
     .from('fuel_exits')
     .insert({
       staff_id,
-      user_name,
+      staff_name,
       date,
       product,
       volume: parseFloat(volume),
@@ -64,13 +67,13 @@ export async function createExit({ staff_id, user_name, date, product, volume, r
   return data
 }
 
-export async function getExits({ limit = 50, offset = 0, userId = null, product = null, refuelType = null } = {}) {
+export async function getExits({ limit = 50, offset = 0, staffId = null, product = null, refuelType = null } = {}) {
   let query = supabase
     .from('fuel_exits')
     .select('*', { count: 'exact' })
     .order('date', { ascending: false })
 
-  if (userId) query = query.eq('user_id', userId)
+  if (staffId) query = query.eq('staff_id', staffId)
   if (product && product !== 'all') query = query.eq('product', product)
   if (refuelType && refuelType !== 'all') query = query.eq('refuel_type', refuelType)
 
@@ -90,21 +93,22 @@ export async function deleteExit(id) {
   if (error) throw error
 }
 
-// ─── PERFILES / USUARIOS ───
+// ─── PERSONAL (Staff) ───
 
-export async function getProfiles() {
+export async function getStaffMembers() {
   const { data, error } = await supabase
-    .from('staff ')
+    .from('staff')
     .select('*')
+    .eq('is_active', true)
     .order('created_at', { ascending: true })
 
   if (error) throw error
   return data
 }
 
-export async function updateProfile(id, updates) {
+export async function updateStaffMember(id, updates) {
   const { data, error } = await supabase
-    .from('staff ')
+    .from('staff')
     .update(updates)
     .eq('id', id)
     .select()
@@ -114,24 +118,25 @@ export async function updateProfile(id, updates) {
   return data
 }
 
-export async function deleteProfile(id) {
-  const { error } = await supabase
-    .from('staff ')
-    .delete()
+export async function deactivateStaffMember(id) {
+  const { data, error } = await supabase
+    .from('staff')
+    .update({ is_active: false })
     .eq('id', id)
+    .select()
+    .single()
 
   if (error) throw error
+  return data
 }
 
 // ─── ESTADÍSTICAS (Dashboard) ───
 
 export async function getStats() {
-  // Total entradas por producto
   const { data: entries } = await supabase
     .from('fuel_entries')
     .select('product, volume')
 
-  // Total salidas por producto
   const { data: exits } = await supabase
     .from('fuel_exits')
     .select('product, volume')

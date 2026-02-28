@@ -89,7 +89,7 @@ export default function DashboardPage() {
                 className="flex justify-between items-center p-3 bg-dark rounded-lg"
               >
                 <div>
-                  <div className="text-sm font-semibold">{ex.user_name}</div>
+                  <div className="text-sm font-semibold">{ex.staff_name}</div>
                   <div className="text-xs text-gray-500">
                     {formatDateTime(ex.date)} · {ex.product} · {ex.refuel_type}
                     {ex.plate ? ` · ${ex.plate}` : ''}

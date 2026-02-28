@@ -1,18 +1,23 @@
 import { supabase, isSupabaseConfigured } from './supabase'
 
 // ═══════════════════════════════════════════════════════════════
-// SERVICIO DE AUTENTICACIÓN
+// SERVICIO DE AUTENTICACIÓN — ECOSISTEMA UNIFICADO
 // ═══════════════════════════════════════════════════════════════
-// Usa el teléfono como identificador único
-// Internamente crea email ficticio: {telefono}@aceitestapia.com
-// La contraseña es el propio teléfono (simplificado para operarios)
+// Usa la tabla 'staff' de la instancia principal de Supabase.
+// Login por teléfono: busca en staff, luego autentica con Supabase Auth.
+//
+// Flujo:
+//   1. Usuario introduce su teléfono
+//   2. Buscamos en staff el registro con ese teléfono
+//   3. Si tiene auth_user_id → login con email/password
+//   4. Si no tiene auth_user_id (primer acceso) → signup + vincular
 
 function phoneToEmail(phone) {
   const cleaned = phone.replace(/\s+/g, '')
-  return `${cleaned}@aceitestapia.com`
+  return `staff-${cleaned}@aceitestapia.com`
 }
 
-// ─── Login ───
+// ─── Login por teléfono ───
 export async function loginWithPhone(phone) {
   const cleaned = phone.replace(/\s+/g, '')
 
@@ -24,32 +29,57 @@ export async function loginWithPhone(phone) {
     throw new Error('Supabase no configurado. Revisa las variables de entorno.')
   }
 
+  // 1. Buscar empleado en staff
+  const { data: member, error: findError } = await supabase
+    .from('staff')
+    .select('*')
+    .eq('phone', cleaned)
+    .eq('is_active', true)
+    .single()
+
+  if (findError || !member) {
+    throw new Error('Teléfono no registrado. Contacta con el administrador.')
+  }
+
   const email = phoneToEmail(cleaned)
 
-  // Intentar login
-  const { data, error } = await supabase.auth.signInWithPassword({
+  // 2. Si ya tiene auth vinculado → login directo
+  if (member.auth_user_id) {
+    const { data, error } = await supabase.auth.signInWithPassword({
+      email,
+      password: cleaned,
+    })
+
+    if (error) throw new Error('Error de acceso. Inténtalo de nuevo.')
+    return { user: data.user, profile: member }
+  }
+
+  // 3. Primer acceso: crear auth user y vincular
+  const { data: signUpData, error: signUpError } = await supabase.auth.signUp({
     email,
     password: cleaned,
   })
 
-  if (error) {
-    // Comprobar si el usuario existe en la tabla de perfiles
-    const { data: profile } = await supabase
-      .from('staff')
-      .select('id, phone')
-      .eq('phone', cleaned)
-      .single()
+  if (signUpError) {
+    // Auth user ya existía (migración previa) → login + vincular
+    if (signUpError.message.includes('already registered')) {
+      const { data: loginData, error: loginError } = await supabase.auth.signInWithPassword({
+        email,
+        password: cleaned,
+      })
+      if (loginError) throw new Error('Error de acceso. Inténtalo de nuevo.')
 
-    if (!profile) {
-      throw new Error('Teléfono no registrado. Contacta con el administrador.')
+      await supabase.from('staff').update({ auth_user_id: loginData.user.id }).eq('id', member.id)
+      member.auth_user_id = loginData.user.id
+      return { user: loginData.user, profile: member }
     }
-
-    throw new Error('Error de acceso. Inténtalo de nuevo.')
+    throw signUpError
   }
 
-  // Obtener perfil completo
-  const profile = await getProfile(data.user.id)
-  return { user: data.user, profile }
+  // Vincular auth_user_id
+  await supabase.from('staff').update({ auth_user_id: signUpData.user.id }).eq('id', member.id)
+  member.auth_user_id = signUpData.user.id
+  return { user: signUpData.user, profile: member }
 }
 
 // ─── Logout ───
@@ -58,64 +88,55 @@ export async function logout() {
   if (error) throw error
 }
 
-// ─── Obtener sesión actual ───
+// ─── Sesión actual ───
 export async function getCurrentSession() {
   const { data: { session } } = await supabase.auth.getSession()
   if (!session) return null
 
-  const profile = await getProfile(session.user.id)
+  const profile = await getStaffProfile(session.user.id)
+  if (!profile) return null
   return { user: session.user, profile }
 }
 
-// ─── Obtener perfil ───
-export async function getProfile(userId) {
+// ─── Perfil de staff por auth_user_id ───
+async function getStaffProfile(authUserId) {
   const { data, error } = await supabase
     .from('staff')
     .select('*')
-    .eq('id', userId)
+    .eq('auth_user_id', authUserId)
+    .eq('is_active', true)
     .single()
 
-  if (error) throw error
+  if (error) return null
   return data
 }
 
-// ─── Crear usuario (solo admin) ───
-export async function createUser({ name, phone, plates = [] }) {
+// ─── Crear empleado (solo admin) ───
+export async function createStaffMember({ name, phone, role = 'operario', plates = [] }) {
   const cleaned = phone.replace(/\s+/g, '')
-  const email = phoneToEmail(cleaned)
 
-  // 1. Crear usuario en Supabase Auth via Edge Function o admin API
-  //    Como usamos la clave anon, primero hacemos signup normal
-  const { data: authData, error: authError } = await supabase.auth.signUp({
-    email,
-    password: cleaned,
-  })
-
-  if (authError) {
-    if (authError.message.includes('already registered')) {
-      throw new Error('Este teléfono ya está registrado')
-    }
-    throw authError
-  }
-
-  // 2. Crear/actualizar perfil
-  const { data: profile, error: profileError } = await supabase
+  const { data, error } = await supabase
     .from('staff')
-    .upsert({
-      id: authData.user.id,
+    .insert({
       name: name.trim(),
       phone: cleaned,
-      role: 'operario',
-      plates: plates,
+      role,
+      plates,
+      is_active: true,
     })
     .select()
     .single()
 
-  if (profileError) throw profileError
-  return profile
+  if (error) {
+    if (error.message.includes('duplicate') || error.message.includes('unique')) {
+      throw new Error('Este teléfono ya está registrado')
+    }
+    throw error
+  }
+  return data
 }
 
-// ─── Listener de cambios de autenticación ───
+// ─── Listener ───
 export function onAuthStateChange(callback) {
   return supabase.auth.onAuthStateChange(callback)
 }
