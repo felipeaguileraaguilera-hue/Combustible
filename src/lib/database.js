@@ -45,11 +45,11 @@ export async function deleteEntry(id) {
 
 // ─── SALIDAS (Repostaje) ───
 
-export async function createExit({ user_id, user_name, date, product, volume, refuel_type, plate }) {
+export async function createExit({ staff_id, user_name, date, product, volume, refuel_type, plate }) {
   const { data, error } = await supabase
     .from('fuel_exits')
     .insert({
-      user_id,
+      staff_id,
       user_name,
       date,
       product,
@@ -94,7 +94,7 @@ export async function deleteExit(id) {
 
 export async function getProfiles() {
   const { data, error } = await supabase
-    .from('profiles')
+    .from('staff ')
     .select('*')
     .order('created_at', { ascending: true })
 
@@ -104,7 +104,7 @@ export async function getProfiles() {
 
 export async function updateProfile(id, updates) {
   const { data, error } = await supabase
-    .from('profiles')
+    .from('staff ')
     .update(updates)
     .eq('id', id)
     .select()
@@ -116,7 +116,7 @@ export async function updateProfile(id, updates) {
 
 export async function deleteProfile(id) {
   const { error } = await supabase
-    .from('profiles')
+    .from('staff ')
     .delete()
     .eq('id', id)
 
