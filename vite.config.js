@@ -3,7 +3,7 @@ import react from '@vitejs/plugin-react'
 
 export default defineConfig({
   plugins: [react()],
-  base: './',  // Cambiar si se despliega en otro path
+  base: '/',  // Cambiar si se despliega en otro path
   server: {
     port: 3000,
     host: true
