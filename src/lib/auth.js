@@ -35,7 +35,7 @@ export async function loginWithPhone(phone) {
   if (error) {
     // Comprobar si el usuario existe en la tabla de perfiles
     const { data: profile } = await supabase
-      .from('profiles')
+      .from('staff')
       .select('id, phone')
       .eq('phone', cleaned)
       .single()
@@ -70,7 +70,7 @@ export async function getCurrentSession() {
 // ─── Obtener perfil ───
 export async function getProfile(userId) {
   const { data, error } = await supabase
-    .from('profiles')
+    .from('staff')
     .select('*')
     .eq('id', userId)
     .single()
@@ -100,7 +100,7 @@ export async function createUser({ name, phone, plates = [] }) {
 
   // 2. Crear/actualizar perfil
   const { data: profile, error: profileError } = await supabase
-    .from('profiles')
+    .from('staff')
     .upsert({
       id: authData.user.id,
       name: name.trim(),
